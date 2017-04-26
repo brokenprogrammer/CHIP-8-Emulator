@@ -1,7 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Main where
 
-import Control.Concurrent (threadDelay)
+import Control.Monad
 import Foreign.C.Types
 import SDL.Vect
 import qualified SDL
@@ -13,15 +13,23 @@ main :: IO ()
 main = do
   SDL.initialize [SDL.InitVideo]
 
-  window <- SDL.createWindow "SDL Tutorial" SDL.defaultWindow { SDL.windowInitialSize = V2 screenWidth screenHeight }
+  window <- SDL.createWindow "CHIP8-Emulator" SDL.defaultWindow { SDL.windowInitialSize = V2 screenWidth screenHeight }
   SDL.showWindow window
 
   screenSurface <- SDL.getWindowSurface window
-  let white = V4 maxBound maxBound maxBound maxBound
-  SDL.surfaceFillRect screenSurface Nothing white
-  SDL.updateWindowSurface window
+  let black = V4 0 0 0 0
 
-  threadDelay 2000000
+  let
+    loop = do
+      events <- SDL.pollEvents
+      let quit = elem SDL.QuitEvent $ map SDL.eventPayload events
+
+      SDL.surfaceFillRect screenSurface Nothing black
+      SDL.updateWindowSurface window
+
+      unless quit loop
+
+  loop
 
   SDL.destroyWindow window
   SDL.quit
