@@ -27,7 +27,12 @@ public class Memory {
 		opcode = 0; // Reset current opcode.
 		I = 0; // Reset the index register.
 		sp = 0; // Reset the stack pointer.
-
+		
+		//Reset memory
+		for(int i = 0; i < memory.length; ++i) {
+			memory[i] = 0;
+		}
+		
 		// Reset stack and the V registers.
 		for (int i = 0; i < 16; ++i) {
 			stack[i] = 0;
@@ -36,11 +41,14 @@ public class Memory {
 	}
 
 	/**
+	 * Loads the program into the memory which is placing the program into the memory
+	 * starting from the memory location 0x200 (512).
 	 * 
+	 * @param b - Byte array containing the bytes read from the program file.
 	 */
-	public void loadProgram() {
-		for (int i = 0; i < 10; ++i) {
-
+	public void loadProgram(byte[] b) {
+		for (int i = 0; i < b.length; ++i) {
+			memory[i + 512] = (b[i] & 0xFF);
 		}
 	}
 

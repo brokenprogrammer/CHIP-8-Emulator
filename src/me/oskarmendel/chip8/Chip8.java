@@ -1,5 +1,12 @@
 package me.oskarmendel.chip8;
 
+import java.io.BufferedInputStream;
+import java.io.DataInputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+
 import javafx.application.Application;
 import javafx.stage.Stage;
 
@@ -65,10 +72,21 @@ public class Chip8 extends Application {
 	 */
 	private void loadProgram(String program) {
 		//Load binary and pass it to memory
-		
-		
-		
-		memory.loadProgram();
+		try {
+			File f = new File(program);
+			DataInputStream in = new DataInputStream(new BufferedInputStream(new FileInputStream(f)));
+			
+			byte[] b = new byte[(int) f.length()];
+			in.read(b);
+			
+			memory.loadProgram(b);
+			in.close();
+			
+		} catch (FileNotFoundException e) {
+			e.printStackTrace();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
 	}
 	
 	/**
