@@ -1,5 +1,7 @@
 package me.oskarmendel.chip8;
 
+import java.util.Random;
+
 /**
  * 
  * @author Oskar Mendel
@@ -18,7 +20,14 @@ public class Memory {
 	private int[] stack = new int[16]; // Remembers location between jumps.
 	private int sp; // In order to remember which level of the stack was used we
 					// use the stack pointer.
+	
+	private int delayTimer; // Timer registers that counts at 60Hz. When set
+	// above zero they will count down to zero.
+	private int soundTimer; // Make a sound whenever the sound timer reaches
+		// zero.
 
+	private static final Random RANDOM = new Random();
+	
 	/**
 	 * Initializes the memory.
 	 */
@@ -29,12 +38,12 @@ public class Memory {
 		sp = 0; // Reset the stack pointer.
 		
 		//Reset memory
-		for(int i = 0; i < memory.length; ++i) {
+		for(int i = 0; i < memory.length; i++) {
 			memory[i] = 0;
 		}
 		
 		// Reset stack and the V registers.
-		for (int i = 0; i < 16; ++i) {
+		for (int i = 0; i < 16; i++) {
 			stack[i] = 0;
 			V[i] = 0;
 		}
@@ -47,7 +56,7 @@ public class Memory {
 	 * @param b - Byte array containing the bytes read from the program file.
 	 */
 	public void loadProgram(byte[] b) {
-		for (int i = 0; i < b.length; ++i) {
+		for (int i = 0; i < b.length; i++) {
 			memory[i + 512] = (b[i] & 0xFF);
 		}
 	}
@@ -217,5 +226,91 @@ public class Memory {
 			
 			return;
 		}
+		
+		switch (opcode & 0xF000) {
+		case 0xA000:
+			// ANNN - Set I = nnn.
+			I = (opcode & 0x0FFF);
+			
+			return;
+		case 0xB000:
+			// BNNN - Jump to location nnn + V0.
+			pc = (opcode & 0x0FFF) + V[0];
+			
+			return;
+		case 0xC000:
+			// CXNN - Set Vx = random byte AND NN.
+			x = (opcode & 0x0F00) >>> 8;
+			
+			V[x] = ((RANDOM.nextInt(256)) & (opcode & 0x00FF));
+			
+			pc += 2;
+			return;
+		case 0xD000:
+			// DXYN - Display n-byte sprite starting at memory location I at (Vx, Vy), set VF = collision.
+			x = (opcode & 0xF);
+			
+			final int[] sprite = new int[x];
+			for (int j = I, count = 0; j < I + x; j++, count++) {
+				sprite[count] = memory[j];
+			}
+			
+			//screen.draw(x, y, sprite) - reutrns bool if pizel was erased.
+			final boolean removed = false;
+			//screen.draw(V[(opcode & 0x0F00) >>> 8], V[(opcode & 0x00F0) >>> 4], sprite);
+			
+			V[0xF] = (removed ? 1 : 0);
+			
+			pc += 2;
+			return;
+		}
+		
+		switch (opcode & 0xF0FF) {
+		case 0xE09E:
+			// EX9E - Skip next instruction if key with the value of Vx is pressed.
+			if(keyboard.wasPressed(V[(opcode & 0x0F00) >>> 8])) {
+				pc += 4;
+			} else {
+				pc += 2;
+			}
+			
+			return;
+		case 0xE0A1:
+			// EXA1 - Skip next instruction if key with the value of Vx is not pressed.
+			if(!keyboard.wasPressed(V[(opcode & 0x0F00) >>> 8])) {
+				pc += 4;
+			} else {
+				pc += 2;
+			}
+			
+			return;
+		case 0xF007:
+			// FX07 - Set Vx = delay timer value.
+			x = (opcode & 0x0F00) >>> 8;
+			V[x] = this.delayTimer;
+			
+			pc += 2;
+			return;
+		case 0xF00A:
+			// FX0A - Wait for a key press, store the value of the key in Vx.
+		}
+	}
+	
+	/**
+	 * Getter for the delay timer.
+	 * 
+	 * @return The delay timer.
+	 */
+	public int getDelayTimer() {
+		return this.delayTimer;
+	}
+	
+	/**
+	 * Getter for the sound timer.
+	 * 
+	 * @return The delay timer.
+	 */
+	public int getSoundTimer() {
+		return this.soundTimer;
 	}
 }

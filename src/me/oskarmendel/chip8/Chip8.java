@@ -36,11 +36,6 @@ public class Chip8 extends Application {
 												// and white screen of 2048
 												// pixels (62*32).
 
-	private int delayTimer; // Timer registers that counts at 60Hz. When set
-							// above zero they will count down to zero.
-	private int soundTimer; // Make a sound whenever the sound timer reaches
-							// zero.
-
 	private int[] keys = new int[16]; // Chip 8 uses a HEX based keypad (0x0 -
 										// 0xF), This array stores the state of
 										// each key.
@@ -100,15 +95,15 @@ public class Chip8 extends Application {
 		memory.decodeOpcode();
 		
 		//Update Timers
-		if (delayTimer > 0) {
-			delayTimer--;
+		if (memory.getDelayTimer() > 0) {
+			//delayTimer--;
 		}
 		
-		if (soundTimer > 0) {
-			if (soundTimer == 1) {
+		if (memory.getSoundTimer() > 0) {
+			if (memory.getSoundTimer() == 1) {
 				System.out.println("Make Sound!");
 			}
-			soundTimer--;
+			//soundTimer--;
 		}
 	}
 
@@ -119,6 +114,7 @@ public class Chip8 extends Application {
 	@Override
 	public void start(Stage primaryStage) throws Exception {
 		mainStage = primaryStage;
+		
 		
 		initialize();
 		loadProgram("");
