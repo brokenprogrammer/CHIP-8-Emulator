@@ -28,10 +28,16 @@ public class Memory {
 
 	private static final Random RANDOM = new Random();
 	
+	private Screen screen;
+	private Keyboard keyboard;
+	
 	/**
 	 * Initializes the memory.
+	 * 
+	 * @param s - Screen to communicate with.
+	 * @param k - Keyboard to read keys from.
 	 */
-	public Memory() {
+	public Memory(Screen s, Keyboard k) {
 		pc = 0x200; // Program counter always starts at 0x200.
 		opcode = 0; // Reset current opcode.
 		I = 0; // Reset the index register.
@@ -77,6 +83,9 @@ public class Memory {
 		switch (opcode) {
 		case 0x00E0:
 			// Clear display
+			screen.clear();
+			
+			pc += 2;
 			return;
 		case 0x00EE:
 			// Returns from a subroutine
@@ -293,6 +302,89 @@ public class Memory {
 			return;
 		case 0xF00A:
 			// FX0A - Wait for a key press, store the value of the key in Vx.
+			x = (opcode & 0x0F00) >>> 8;
+			boolean keyPressed = false;
+			
+			for (int j = 0; j <= 0xF; j++) {
+				if (keyboard.isPressed(j)) {
+					V[x] = j;
+					pc += 2;
+					return;
+				}
+			}
+			
+			//If no key was pressed return, try again.
+			return;
+		case 0xF015:
+			// FX15 - Set delay timer = Vx.
+			x = (opcode & 0x0F00) >>> 8;
+			
+			this.delayTimer = V[x];
+			
+			pc += 2;
+			return;
+		case 0xF018:
+			// FX18 - Set sound timer = Vx.
+			x = (opcode & 0x0F00) >>> 8;
+			
+			this.soundTimer = V[x];
+			
+			pc += 2;
+			return;
+		case 0xF01E:
+			// FX1E - Set I = I + Vx.
+			x = (opcode & 0x0F00) >>> 8;
+			
+			//Setting VF to 1 when range overflow.
+			if(I + V[x] > 0xFFF) {
+				V[0xF] = 1;
+			} else {
+				V[0xF] = 0;
+			}
+			
+			I = I + V[x];
+			
+			pc += 2;
+			return;
+		case 0xF029:
+			// FX29 - Set I = location of sprite for digit Vx.
+			x = (opcode & 0x0F00) >>> 8;
+			
+			I = V[x] * 5;
+			
+			pc += 2;
+			return;
+		case 0xF033:
+			// FX33 - Store binary coded decimal representation of Vx 
+			// in memory locations I, I+1, and I+2.
+			x = (opcode & 0x0F00) >>> 8;
+			
+			memory[I] = (V[x] / 100);
+			memory[I + 1] = ((V[x] - memory[I]) / 10);
+			memory[I + 2] = (V[x] - memory[I] - memory[I+1]);
+			
+			pc += 2;
+			return;
+		case 0xF055:
+			// FX55 - Store registers V0 through Vx in memory starting at location I.
+			x = (opcode & 0x0F00) >>> 8;
+			
+			for (int j = 0; j <= x; j++) {
+				memory[I + j] = V[j];
+			}
+			
+			pc += 2;
+			return;
+		case 0xF065:
+			// FX65 - Read registers V0 through Vx from memory starting at location I.
+			x = (opcode & 0x0F00) >>> 8;
+			
+			for (int j = 0; j <= x; j++) {
+				V[j] = memory[I + j];
+			}
+			
+			pc += 2;
+			return;
 		}
 	}
 	

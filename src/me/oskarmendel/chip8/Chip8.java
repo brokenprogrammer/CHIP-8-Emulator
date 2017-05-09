@@ -32,21 +32,16 @@ public class Chip8 extends Application {
 	 * 0x200-0xFFF - Program ROM and work RAM
 	 */
 
-	private int[] graphic = new int[64 * 32]; // Graphics in Chip 8 is a black
-												// and white screen of 2048
-												// pixels (62*32).
-
-	private int[] keys = new int[16]; // Chip 8 uses a HEX based keypad (0x0 -
-										// 0xF), This array stores the state of
-										// each key.
-
 	/**
 	 * Setup the graphics and input systen and clear the memory and screen.
 	 */
 	private void initialize() {
 		mainStage.setTitle("CHIP-8-Emulator");
 		
-		memory = new Memory();
+		Screen screen = new Screen();
+		Keyboard keyboard = new Keyboard();
+		
+		memory = new Memory(screen, keyboard);
 		
 		//Clear display.
 		
