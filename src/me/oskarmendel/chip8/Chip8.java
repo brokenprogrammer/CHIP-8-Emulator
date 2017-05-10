@@ -29,8 +29,11 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.TimeUnit;
 
-import javafx.animation.AnimationTimer;
 import javafx.application.Application;
 import javafx.event.EventHandler;
 import javafx.scene.Group;
@@ -52,6 +55,10 @@ public class Chip8 extends Application {
 	
 	private Stage mainStage;
 	
+	private ScheduledExecutorService threadPool = Executors.newScheduledThreadPool(2); 
+	private ScheduledFuture<?> cpuThread;
+    private ScheduledFuture<?> displayThread;
+	
 	private Memory memory;
 	private Screen screen;
 	private Keyboard keyboard;
@@ -71,8 +78,7 @@ public class Chip8 extends Application {
 		screen = new Screen();
 		keyboard = new Keyboard();
 		memory = new Memory(screen, keyboard);
-		
-		//Load fontset
+	
 		screen.render();
 
 		Group root = new Group();
@@ -100,41 +106,9 @@ public class Chip8 extends Application {
 		mainStage.setMinWidth(SCREEN_WIDTH);
 		mainStage.setMinHeight(SCREEN_HEIGHT);
 		
-		loadProgram("roms/PONG");
+		loadProgram("roms/TETRIS");
 		
-		new AnimationTimer() {
-			long timer = 0;
-			
-			@Override
-			public void handle(long currentNanoTime) {
-				
-				timer = System.nanoTime();
-				//Fetch opcode
-				memory.fetchOpcode();
-				System.out.println("TIME TO FETCH: " + (System.nanoTime() - timer));
-				
-				timer = System.nanoTime();
-				//Decode & Execute opcode
-				memory.decodeOpcode();
-				System.out.println("TIME TO DECODE: " + (System.nanoTime() - timer));
-				
-				timer = System.nanoTime();
-				screen.render();
-				System.out.println("TIME TO RENDER: " + (System.nanoTime() - timer));
-				
-				//Update Timers
-				if (memory.getDelayTimer() > 0) {
-					memory.setDelayTimer(memory.getDelayTimer() - 1);
-				}
-				
-				if (memory.getSoundTimer() > 0) {
-					if (memory.getSoundTimer() == 1) {
-						System.out.println("Make Sound!");
-					}
-					memory.setSoundTimer(memory.getSoundTimer() - 1);
-				}
-			}
-		}.start();
+		emulationLoop();
 		
 		mainStage.show();
 	}
@@ -168,27 +142,38 @@ public class Chip8 extends Application {
 	 * The main emulation loop.
 	 */
 	private void emulationLoop() {
-		//Fetch opcode
-		memory.fetchOpcode();
-		
-		//Decode & Execute opcode
-		memory.decodeOpcode();
-		
-		System.out.println("Delay timer: " + memory.getDelayTimer());
-		//Update Timers
-		if (memory.getDelayTimer() > 0) {
-			memory.setDelayTimer(memory.getDelayTimer() - 1);
-		}
-		
-		if (memory.getSoundTimer() > 0) {
-			if (memory.getSoundTimer() == 1) {
-				System.out.println("Make Sound!");
+		 // 500 operations/s
+        cpuThread = threadPool.scheduleWithFixedDelay(() -> {
+        	//Fetch opcode
+			memory.fetchOpcode();
+			
+			//Decode & Execute opcode
+			memory.decodeOpcode();
+        }, 2, 2, TimeUnit.MILLISECONDS);
+        
+        // ~60Hz
+        displayThread = threadPool.scheduleWithFixedDelay(() -> {
+        	screen.render();
+        	//Update Timers
+			if (memory.getDelayTimer() > 0) {
+				memory.setDelayTimer(memory.getDelayTimer() - 1);
 			}
-			memory.setSoundTimer(memory.getSoundTimer() - 1);
-		}
-		
-		screen.render();
+			
+			if (memory.getSoundTimer() > 0) {
+				if (memory.getSoundTimer() == 1) {
+					System.out.println("Make Sound!");
+				}
+				memory.setSoundTimer(memory.getSoundTimer() - 1);
+			}
+        }, 17, 17, TimeUnit.MILLISECONDS);
 	}
+	
+	public void stopThreadPool() {
+        if (cpuThread != null) {
+            cpuThread.cancel(true);
+            displayThread.cancel(true);
+        }
+    }
 
 	public static void main(String[] args) {
 		launch(args);

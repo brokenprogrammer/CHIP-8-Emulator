@@ -48,12 +48,10 @@ public class Screen extends Canvas{
 	
 	public Screen() {
 		super(800, 600);
+		setFocusTraversable(true);
 		
 		gc = this.getGraphicsContext2D();
-		
 		clear();
-		
-		gc.setFill(Color.WHITE);
 	}
 	
 	/**
@@ -65,25 +63,21 @@ public class Screen extends Canvas{
 				graphic[x][y] = 0;
 			}
 		}
-		
-		gc.clearRect(0, 0, 800, 600);
-		gc.setFill(Color.BLACK);
-		gc.fillRect(0, 0, 800, 600);
 	}
 	
 	/**
 	 * Renders the display.
 	 */
 	public void render() {
-		for(int y = 0; y < HEIGHT; y++) {
-			for(int x = 0; x < WIDTH; x++) {
-				if(graphic[x][y] == 1) {
+		for(int x = 0; x < graphic.length; x++) {
+			for(int y = 0; y < graphic[y].length; y++) {
+				if (graphic[x][y] == 1) {
 					gc.setFill(Color.WHITE);
-					gc.fillRect(x*scale, (y*scale)+100, scale, scale);
 				} else {
 					gc.setFill(Color.BLACK);
-					gc.fillRect(x*scale, (y*scale)+100, scale, scale);
 				}
+				
+				gc.fillRect(x*scale, (y*scale)+100, scale, scale);
 			}
 		}
 	}
