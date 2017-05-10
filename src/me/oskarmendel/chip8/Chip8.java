@@ -7,7 +7,10 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 
+import javafx.animation.AnimationTimer;
 import javafx.application.Application;
+import javafx.scene.Group;
+import javafx.scene.Scene;
 import javafx.stage.Stage;
 
 /**
@@ -25,6 +28,8 @@ public class Chip8 extends Application {
 	private Stage mainStage;
 	
 	private Memory memory;
+	private Screen screen;
+	private Keyboard keyboard;
 
 	/*
 	 * Chip 8 Memory map 0x000-0x1FF - Chip 8 interpreter (contains font set in
@@ -38,20 +43,51 @@ public class Chip8 extends Application {
 	private void initialize() {
 		mainStage.setTitle("CHIP-8-Emulator");
 		
-		Screen screen = new Screen();
-		Keyboard keyboard = new Keyboard();
-		
+		screen = new Screen();
+		keyboard = new Keyboard();
 		memory = new Memory(screen, keyboard);
 		
-		//Clear display.
-		
 		//Load fontset
+		screen.render();
 
-		// TEMP
+		Group root = new Group();
+		root.getChildren().add(screen);
+		
+		Scene mainScene = new Scene(root);
+		
+		mainStage.setScene(mainScene);
 		mainStage.setMaxWidth(SCREEN_WIDTH);
 		mainStage.setMaxHeight(SCREEN_HEIGHT);
 		mainStage.setMinWidth(SCREEN_WIDTH);
 		mainStage.setMinHeight(SCREEN_HEIGHT);
+		
+		loadProgram("roms/PONG");
+		
+		new AnimationTimer() {
+			@Override
+			public void handle(long currentNanoTime) {
+				//Fetch opcode
+				memory.fetchOpcode();
+				
+				//Decode & Execute opcode
+				memory.decodeOpcode();
+				
+				screen.render();
+				
+				//Update Timers
+				if (memory.getDelayTimer() > 0) {
+					memory.setDelayTimer(memory.getDelayTimer() - 1);
+				}
+				
+				if (memory.getSoundTimer() > 0) {
+					if (memory.getSoundTimer() == 1) {
+						System.out.println("Make Sound!");
+					}
+					memory.setSoundTimer(memory.getSoundTimer() - 1);
+				}
+			}
+		}.start();
+		
 		mainStage.show();
 	}
 	
@@ -64,6 +100,7 @@ public class Chip8 extends Application {
 		//Load binary and pass it to memory
 		try {
 			File f = new File(program);
+			
 			DataInputStream in = new DataInputStream(new BufferedInputStream(new FileInputStream(f)));
 			
 			byte[] b = new byte[(int) f.length()];
@@ -89,17 +126,20 @@ public class Chip8 extends Application {
 		//Decode & Execute opcode
 		memory.decodeOpcode();
 		
+		System.out.println("Delay timer: " + memory.getDelayTimer());
 		//Update Timers
 		if (memory.getDelayTimer() > 0) {
-			//delayTimer--;
+			memory.setDelayTimer(memory.getDelayTimer() - 1);
 		}
 		
 		if (memory.getSoundTimer() > 0) {
 			if (memory.getSoundTimer() == 1) {
 				System.out.println("Make Sound!");
 			}
-			//soundTimer--;
+			memory.setSoundTimer(memory.getSoundTimer() - 1);
 		}
+		
+		screen.render();
 	}
 
 	public static void main(String[] args) {
@@ -109,11 +149,6 @@ public class Chip8 extends Application {
 	@Override
 	public void start(Stage primaryStage) throws Exception {
 		mainStage = primaryStage;
-		
-		
 		initialize();
-		loadProgram("");
-		
-		emulationLoop();
 	}
 }
