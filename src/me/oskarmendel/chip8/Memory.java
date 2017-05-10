@@ -38,6 +38,9 @@ public class Memory {
 	 * @param k - Keyboard to read keys from.
 	 */
 	public Memory(Screen s, Keyboard k) {
+		this.screen = s;
+		this.keyboard = k;
+		
 		pc = 0x200; // Program counter always starts at 0x200.
 		opcode = 0; // Reset current opcode.
 		I = 0; // Reset the index register.
@@ -72,6 +75,7 @@ public class Memory {
 	 */
 	public void fetchOpcode() {
 		opcode = (memory[pc] << 8 | memory[pc + 1]);
+		System.out.println("Opcode: " + opcode);
 	}
 
 	/**
@@ -90,6 +94,9 @@ public class Memory {
 		case 0x00EE:
 			// Returns from a subroutine
 			pc = stack[sp--];
+			System.out.println("Opcode: " + opcode + ": Returns from a subroutine.");
+			
+			pc += 2;
 			return;
 		}
 
@@ -97,19 +104,28 @@ public class Memory {
 		case 0x1000:
 			// 1NNN - Jump to address NNN
 			pc = opcode & 0x0FFF;
+			
+			System.out.println("Opcode: " + opcode + ": Jump to address NNN");
+			
 			return;
 		case 0x2000:
 			// 2NNN - Call subroutine at nnn.
 			stack[++sp] = pc;
+			
+			System.out.println("Opcode: " + opcode + ": Call subroutine at nnn.");
+			
 			pc = opcode & 0x0FFF;
 			return;
 		case 0x3000:
 			// 3XNN - Skip next instruction if Vx = kk.
 			if (V[(opcode & 0x0F00) >>> 8] == (opcode & 0x00FF)) {
 				pc += 4;
+				System.out.println("Opcode: " + opcode + ": Skipped next instruction cause Vx = kk.");
 			} else {
 				pc += 2;
+				System.out.println("Opcode: " + opcode + ": did not Skip next instruction if Vx = kk.");
 			}
+			
 			return;
 		case 0x4000:
 			// 4XNN - Skip next instruction if Vx != kk.
@@ -130,6 +146,9 @@ public class Memory {
 		case 0x6000:
 			// 6XNN - Set Vx = kk.
 			V[(opcode & 0x0F00) >>> 8] = (opcode & 0x00FF);
+			
+			System.out.println("Opcode: " + opcode + ": Set Vx = kk.");
+			
 			pc += 2;
 			return;
 		case 0x7000:
@@ -161,6 +180,9 @@ public class Memory {
 			// 8XY3 - Set Vx = Vx XOR Vy.
 			x = (opcode & 0x0F00) >>> 8;
 			V[x] = (V[x] ^ V[(opcode & 0x00F0) >>> 4]);
+			
+			System.out.println("Opcode: " + opcode + "Set Vx = Vx XOR Vy.");
+			
 			pc += 2;
 			return;
 		case 0x8004:
@@ -239,8 +261,10 @@ public class Memory {
 		switch (opcode & 0xF000) {
 		case 0xA000:
 			// ANNN - Set I = nnn.
+			System.out.println("Opcode: " + opcode + " Set I = nnn.");
 			I = (opcode & 0x0FFF);
 			
+			pc += 2;
 			return;
 		case 0xB000:
 			// BNNN - Jump to location nnn + V0.
@@ -257,16 +281,16 @@ public class Memory {
 			return;
 		case 0xD000:
 			// DXYN - Display n-byte sprite starting at memory location I at (Vx, Vy), set VF = collision.
+			System.out.println("Opcode: " + opcode + " Display n-byte sprite.");
 			x = (opcode & 0xF);
 			
-			final int[] sprite = new int[x];
+			int[] sprite = new int[x];
 			for (int j = I, count = 0; j < I + x; j++, count++) {
 				sprite[count] = memory[j];
 			}
 			
 			//screen.draw(x, y, sprite) - reutrns bool if pizel was erased.
-			final boolean removed = false;
-			//screen.draw(V[(opcode & 0x0F00) >>> 8], V[(opcode & 0x00F0) >>> 4], sprite);
+			boolean removed = screen.draw(V[(opcode & 0x0F00) >>> 8], V[(opcode & 0x00F0) >>> 4], sprite);
 			
 			V[0xF] = (removed ? 1 : 0);
 			
@@ -297,6 +321,8 @@ public class Memory {
 			// FX07 - Set Vx = delay timer value.
 			x = (opcode & 0x0F00) >>> 8;
 			V[x] = this.delayTimer;
+			
+			System.out.println("Opcode: " + opcode + "Set Vx = delay timer value.");
 			
 			pc += 2;
 			return;
@@ -398,11 +424,29 @@ public class Memory {
 	}
 	
 	/**
+	 * Setter for the delay timer.
+	 * 
+	 * @param d - Delay timer value.
+	 */
+	public void setDelayTimer(int d) {
+		this.delayTimer = d;
+	}
+	
+	/**
 	 * Getter for the sound timer.
 	 * 
 	 * @return The delay timer.
 	 */
 	public int getSoundTimer() {
 		return this.soundTimer;
+	}
+	
+	/**
+	 * Setter for the sound timer.
+	 * 
+	 * @param s - Sound timer value.
+	 */
+	public void setSoundTimer(int s) {
+		this.soundTimer = s;
 	}
 }
