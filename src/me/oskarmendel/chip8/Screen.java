@@ -19,7 +19,7 @@ public class Screen extends Canvas{
 	
 	private GraphicsContext gc;
 	
-	private int[][] graphic = new int[WIDTH][HEIGHT]; // Graphics in Chip 8 is a black
+	public int[][] graphic = new int[WIDTH][HEIGHT]; // Graphics in Chip 8 is a black
 	// and white screen of 2048
 	// pixels (62*32).
 	
@@ -55,6 +55,10 @@ public class Screen extends Canvas{
 		for(int y = 0; y < HEIGHT; y++) {
 			for(int x = 0; x < WIDTH; x++) {
 				if(graphic[x][y] == 1) {
+					gc.setFill(Color.WHITE);
+					gc.fillRect(x*scale, (y*scale)+100, scale, scale);
+				} else {
+					gc.setFill(Color.BLACK);
 					gc.fillRect(x*scale, (y*scale)+100, scale, scale);
 				}
 			}

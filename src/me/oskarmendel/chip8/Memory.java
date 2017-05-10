@@ -56,6 +56,14 @@ public class Memory {
 			stack[i] = 0;
 			V[i] = 0;
 		}
+		
+		//Load font into memory
+		for (int i = 0; i < 80; i++) {
+			memory[i] = Keyboard.FONT[i];
+		}
+		
+		this.delayTimer = 0;
+		this.soundTimer = 0;
 	}
 
 	/**
@@ -74,8 +82,7 @@ public class Memory {
 	 * Fetches a single opcode.
 	 */
 	public void fetchOpcode() {
-		opcode = (memory[pc] << 8 | memory[pc + 1]);
-		System.out.println("Opcode: " + opcode);
+		opcode = ((memory[pc] << 8) | (memory[pc + 1]));
 	}
 
 	/**
@@ -94,7 +101,6 @@ public class Memory {
 		case 0x00EE:
 			// Returns from a subroutine
 			pc = stack[sp--];
-			System.out.println("Opcode: " + opcode + ": Returns from a subroutine.");
 			
 			pc += 2;
 			return;
@@ -103,33 +109,27 @@ public class Memory {
 		switch (opcode & 0xF000) {
 		case 0x1000:
 			// 1NNN - Jump to address NNN
-			pc = opcode & 0x0FFF;
-			
-			System.out.println("Opcode: " + opcode + ": Jump to address NNN");
+			pc = opcode & 0xFFF;
 			
 			return;
 		case 0x2000:
 			// 2NNN - Call subroutine at nnn.
 			stack[++sp] = pc;
 			
-			System.out.println("Opcode: " + opcode + ": Call subroutine at nnn.");
-			
-			pc = opcode & 0x0FFF;
+			pc = opcode & 0xFFF;
 			return;
 		case 0x3000:
 			// 3XNN - Skip next instruction if Vx = kk.
-			if (V[(opcode & 0x0F00) >>> 8] == (opcode & 0x00FF)) {
+			if (V[(opcode & 0x0F00) >>> 8] == (opcode & 0xFF)) {
 				pc += 4;
-				System.out.println("Opcode: " + opcode + ": Skipped next instruction cause Vx = kk.");
 			} else {
 				pc += 2;
-				System.out.println("Opcode: " + opcode + ": did not Skip next instruction if Vx = kk.");
 			}
 			
 			return;
 		case 0x4000:
 			// 4XNN - Skip next instruction if Vx != kk.
-			if (V[(opcode & 0x0F00) >>> 8] != (opcode & 0x00FF)) {
+			if (V[(opcode & 0x0F00) >>> 8] != (opcode & 0xFF)) {
 				pc += 4;
 			} else {
 				pc += 2;
@@ -145,15 +145,15 @@ public class Memory {
 			return;
 		case 0x6000:
 			// 6XNN - Set Vx = kk.
-			V[(opcode & 0x0F00) >>> 8] = (opcode & 0x00FF);
-			
-			System.out.println("Opcode: " + opcode + ": Set Vx = kk.");
+			V[(opcode & 0x0F00) >>> 8] = (opcode & 0xFF);
 			
 			pc += 2;
 			return;
 		case 0x7000:
-			// 7XNN - Set Vx = Vx + kk.
-			V[(opcode & 0x0F00) >>> 8] += (opcode & 0x00FF);
+			// 7XNN - Adds NN to VX.
+			x = (opcode & 0x0F00) >>> 8;
+			V[x] = ((V[x] + (opcode & 0x00FF)) & 0xFF);
+			
 			pc += 2;
 			return;
 		}
@@ -181,8 +181,6 @@ public class Memory {
 			x = (opcode & 0x0F00) >>> 8;
 			V[x] = (V[x] ^ V[(opcode & 0x00F0) >>> 4]);
 			
-			System.out.println("Opcode: " + opcode + "Set Vx = Vx XOR Vy.");
-			
 			pc += 2;
 			return;
 		case 0x8004:
@@ -205,7 +203,7 @@ public class Memory {
 				V[0xF] = 1;
 			}
 			
-			V[x] = V[x] - V[(opcode & 0x00F0) >>> 4];
+			V[x] = (V[x] - V[(opcode & 0x00F0) >>> 4]) & 0xFF;
 			
 			pc += 2;
 			return;
@@ -213,7 +211,8 @@ public class Memory {
 			// 8XY6 - Set Vx = Vx SHR 1.
 			// Shift Vx right by 1. Sets VF to the least significant bit of Vx before shift.
 			x = (opcode & 0x0F00) >>> 8;
-			V[0xF] = V[x] & 0x1;
+			
+			V[0xF] = (V[x] & 0x1) == 1 ? 1 : 0;
 			
 			V[x] = (V[x] >>> 1);
 			
@@ -230,7 +229,7 @@ public class Memory {
 				V[0xF] = 0;
 			}
 			
-			V[x] = V[(opcode & 0x00F0) >>> 4] - V[x];
+			V[x] = ((V[(opcode & 0x00F0) >>> 4] - V[x]) & 0xFF);
 			
 			pc += 2;
 			return;
@@ -239,7 +238,7 @@ public class Memory {
 			// Shift Vx left by 1. Sets VF to the value of the most significant bit of Vx before the shift.
 			x = (opcode & 0x0F00) >>> 8;
 			
-			V[0xF] = (V[x] >>> 7) == 1 ? 1 : 0;
+			V[0xF] = (V[x] >>> 7) == 0x1 ? 1 : 0;
 			
 			V[x] = ((V[x] << 1) & 0xFF);
 			
@@ -261,7 +260,6 @@ public class Memory {
 		switch (opcode & 0xF000) {
 		case 0xA000:
 			// ANNN - Set I = nnn.
-			System.out.println("Opcode: " + opcode + " Set I = nnn.");
 			I = (opcode & 0x0FFF);
 			
 			pc += 2;
@@ -281,7 +279,6 @@ public class Memory {
 			return;
 		case 0xD000:
 			// DXYN - Display n-byte sprite starting at memory location I at (Vx, Vy), set VF = collision.
-			System.out.println("Opcode: " + opcode + " Display n-byte sprite.");
 			x = (opcode & 0xF);
 			
 			int[] sprite = new int[x];
@@ -301,7 +298,7 @@ public class Memory {
 		switch (opcode & 0xF0FF) {
 		case 0xE09E:
 			// EX9E - Skip next instruction if key with the value of Vx is pressed.
-			if(keyboard.wasPressed(V[(opcode & 0x0F00) >>> 8])) {
+			if(keyboard.isPressed(V[(opcode & 0x0F00) >>> 8])) {
 				pc += 4;
 			} else {
 				pc += 2;
@@ -310,7 +307,7 @@ public class Memory {
 			return;
 		case 0xE0A1:
 			// EXA1 - Skip next instruction if key with the value of Vx is not pressed.
-			if(!keyboard.wasPressed(V[(opcode & 0x0F00) >>> 8])) {
+			if(!keyboard.isPressed(V[(opcode & 0x0F00) >>> 8])) {
 				pc += 4;
 			} else {
 				pc += 2;
@@ -320,16 +317,13 @@ public class Memory {
 		case 0xF007:
 			// FX07 - Set Vx = delay timer value.
 			x = (opcode & 0x0F00) >>> 8;
-			V[x] = this.delayTimer;
-			
-			System.out.println("Opcode: " + opcode + "Set Vx = delay timer value.");
+			V[x] = (this.delayTimer & 0xFF);
 			
 			pc += 2;
 			return;
 		case 0xF00A:
 			// FX0A - Wait for a key press, store the value of the key in Vx.
 			x = (opcode & 0x0F00) >>> 8;
-			boolean keyPressed = false;
 			
 			for (int j = 0; j <= 0xF; j++) {
 				if (keyboard.isPressed(j)) {
@@ -362,13 +356,13 @@ public class Memory {
 			x = (opcode & 0x0F00) >>> 8;
 			
 			//Setting VF to 1 when range overflow.
-			if(I + V[x] > 0xFFF) {
-				V[0xF] = 1;
-			} else {
-				V[0xF] = 0;
-			}
+//			if(I + V[x] > 0xFFF) {
+//				V[0xF] = 1;
+//			} else {
+//				V[0xF] = 0;
+//			}
 			
-			I = I + V[x];
+			I = ((I + V[x]) & 0xFFF);
 			
 			pc += 2;
 			return;
@@ -386,8 +380,8 @@ public class Memory {
 			x = (opcode & 0x0F00) >>> 8;
 			
 			memory[I] = (V[x] / 100);
-			memory[I + 1] = ((V[x] - memory[I]) / 10);
-			memory[I + 2] = (V[x] - memory[I] - memory[I+1]);
+			memory[I + 1] = ((V[x] / 10) % 10);
+			memory[I + 2] = ((V[x] % 100) % 10);
 			
 			pc += 2;
 			return;

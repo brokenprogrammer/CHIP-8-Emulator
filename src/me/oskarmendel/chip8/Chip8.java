@@ -9,8 +9,10 @@ import java.io.IOException;
 
 import javafx.animation.AnimationTimer;
 import javafx.application.Application;
+import javafx.event.EventHandler;
 import javafx.scene.Group;
 import javafx.scene.Scene;
+import javafx.scene.input.KeyEvent;
 import javafx.stage.Stage;
 
 /**
@@ -55,6 +57,20 @@ public class Chip8 extends Application {
 		
 		Scene mainScene = new Scene(root);
 		
+		mainScene.setOnKeyPressed(new EventHandler<KeyEvent>() {
+			@Override
+			public void handle(KeyEvent e) {
+				keyboard.setKeyDown(e.getCode());
+			}
+		});
+		
+		mainScene.setOnKeyReleased(new EventHandler<KeyEvent>() {
+			@Override
+			public void handle(KeyEvent e) {
+				keyboard.setKeyUp(e.getCode());
+			}
+		});
+		
 		mainStage.setScene(mainScene);
 		mainStage.setMaxWidth(SCREEN_WIDTH);
 		mainStage.setMaxHeight(SCREEN_HEIGHT);
@@ -64,15 +80,24 @@ public class Chip8 extends Application {
 		loadProgram("roms/PONG");
 		
 		new AnimationTimer() {
+			long timer = 0;
+			
 			@Override
 			public void handle(long currentNanoTime) {
+				
+				timer = System.nanoTime();
 				//Fetch opcode
 				memory.fetchOpcode();
+				System.out.println("TIME TO FETCH: " + (System.nanoTime() - timer));
 				
+				timer = System.nanoTime();
 				//Decode & Execute opcode
 				memory.decodeOpcode();
+				System.out.println("TIME TO DECODE: " + (System.nanoTime() - timer));
 				
+				timer = System.nanoTime();
 				screen.render();
+				System.out.println("TIME TO RENDER: " + (System.nanoTime() - timer));
 				
 				//Update Timers
 				if (memory.getDelayTimer() > 0) {
