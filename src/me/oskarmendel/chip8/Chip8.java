@@ -106,7 +106,7 @@ public class Chip8 extends Application {
 		mainStage.setMinWidth(SCREEN_WIDTH);
 		mainStage.setMinHeight(SCREEN_HEIGHT);
 		
-		loadProgram("roms/TETRIS");
+		loadProgram("roms/PONG");
 		
 		emulationLoop();
 		
@@ -173,6 +173,7 @@ public class Chip8 extends Application {
             cpuThread.cancel(true);
             displayThread.cancel(true);
         }
+        threadPool.shutdown();
     }
 
 	public static void main(String[] args) {
@@ -184,4 +185,9 @@ public class Chip8 extends Application {
 		mainStage = primaryStage;
 		initialize();
 	}
+	
+	@Override
+	public void stop() {
+        stopThreadPool(); 
+    }
 }

@@ -83,30 +83,23 @@ public class Screen extends Canvas{
 	}
 	
 	/**
-	 * Draws the given sprite at the specified coordinates.
+	 * Gets the content of target pixel.
 	 * 
 	 * @param x - X coordinate.
 	 * @param y - Y coordinate.
-	 * @param sprite - The sprite to draw.
-	 * @return True of a pixel was removed, false otherwise.
+	 * @return The pixel at target x and y coordinate, 1 for white 0 for black.
 	 */
-	public boolean draw(int x, int y, int[] sprite) {
-		boolean removed = false;
-		
-		for (int i = 0; i < sprite.length; i++) {
-			for (int xLine = 7; xLine >= 0; xLine--) {
-				if(((sprite[i] >> xLine) & 1) == 1) {
-					int indy = (y + i) % HEIGHT;
-					int indx = (x + 8 - xLine) % WIDTH;
-					graphic[indx][indy] ^= 1;
-					
-					if (graphic[indx][indy] == 0) {
-						removed = true;
-					}
-				}
-			}
-		}
-		
-		return removed;
+	public int getPixel(int x, int y) {
+		return graphic[x][y];
+	}
+	
+	/**
+	 * Sets the pixel at target location.
+	 * 
+	 * @param x - X coordinate.
+	 * @param y - Y coordinate.
+	 */
+	public void setPixel(int x, int y) {
+		graphic[x][y] ^= 1;
 	}
 }

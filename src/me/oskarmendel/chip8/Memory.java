@@ -132,18 +132,18 @@ public class Memory {
 		switch (opcode & 0xF000) {
 		case 0x1000:
 			// 1NNN - Jump to address NNN
-			pc = opcode & 0xFFF;
+			pc = opcode & 0x0FFF;
 			
 			return;
 		case 0x2000:
 			// 2NNN - Call subroutine at nnn.
 			stack[++sp] = pc;
 			
-			pc = opcode & 0xFFF;
+			pc = opcode & 0x0FFF;
 			return;
 		case 0x3000:
 			// 3XNN - Skip next instruction if Vx = kk.
-			if (V[(opcode & 0x0F00) >>> 8] == (opcode & 0xFF)) {
+			if (V[(opcode & 0x0F00) >>> 8] == (opcode & 0x00FF)) {
 				pc += 4;
 			} else {
 				pc += 2;
@@ -152,7 +152,7 @@ public class Memory {
 			return;
 		case 0x4000:
 			// 4XNN - Skip next instruction if Vx != kk.
-			if (V[(opcode & 0x0F00) >>> 8] != (opcode & 0xFF)) {
+			if (V[(opcode & 0x0F00) >>> 8] != (opcode & 0x00FF)) {
 				pc += 4;
 			} else {
 				pc += 2;
@@ -168,14 +168,22 @@ public class Memory {
 			return;
 		case 0x6000:
 			// 6XNN - Set Vx = kk.
-			V[(opcode & 0x0F00) >>> 8] = (opcode & 0xFF);
+			V[(opcode & 0x0F00) >>> 8] = (opcode & 0x00FF);
 			
 			pc += 2;
 			return;
 		case 0x7000:
 			// 7XNN - Adds NN to VX.
 			x = (opcode & 0x0F00) >>> 8;
-			V[x] = ((V[x] + (opcode & 0x00FF)) & 0xFF);
+			//V[x] = ((V[x] + (opcode & 0x00FF)) & 0xFF);
+			int NN = (opcode & 0x00FF);
+			 int result = V[x] + NN;
+	        // resolve overflow
+	        if (result >= 256) {
+	            V[x] = result - 256;
+	        } else {
+	            V[x] = result;
+	        }	
 			
 			pc += 2;
 			return;
@@ -302,17 +310,32 @@ public class Memory {
 			return;
 		case 0xD000:
 			// DXYN - Display n-byte sprite starting at memory location I at (Vx, Vy), set VF = collision.
-			x = (opcode & 0xF);
-			
-			int[] sprite = new int[x];
-			for (int j = I, count = 0; j < I + x; j++, count++) {
-				sprite[count] = memory[j];
-			}
-			
-			//screen.draw(x, y, sprite) - reutrns bool if pizel was erased.
-			boolean removed = screen.draw(V[(opcode & 0x0F00) >>> 8], V[(opcode & 0x00F0) >>> 4], sprite);
-			
-			V[0xF] = (removed ? 1 : 0);
+			x = V[(opcode & 0x0F00) >> 8];
+	        int y = V[(opcode & 0x00F0) >> 4];
+	        int height = opcode & 0x000F;
+	        V[0xF] = 0;
+	        for (int yLine = 0; yLine < height; yLine++) {
+	            int pixel = memory[I + yLine];
+
+	            for (int xLine = 0; xLine < 8; xLine++) {
+	                // check each bit (pixel) in the 8 bit row
+	                if ((pixel & (0x80 >> xLine)) != 0) {
+
+	                    // wrap pixels if they're drawn off screen
+	                    int xCoord = x+xLine;
+	                    int yCoord = y+yLine; 
+	                    
+	                    if (xCoord < 64 && yCoord < 32) {
+	                        // if pixel already exists, set carry (collision)
+	                        if (screen.getPixel(xCoord, yCoord) == 1) {
+	                            V[0xF] = 1;
+	                        }
+	                        // draw via xor
+	                        screen.setPixel(xCoord,yCoord);
+	                    }
+	                }
+	            }
+	        }  
 			
 			pc += 2;
 			return;
@@ -379,11 +402,11 @@ public class Memory {
 			x = (opcode & 0x0F00) >>> 8;
 			
 			//Setting VF to 1 when range overflow.
-//			if(I + V[x] > 0xFFF) {
-//				V[0xF] = 1;
-//			} else {
-//				V[0xF] = 0;
-//			}
+			if(I + V[x] > 0xFFF) {
+				V[0xF] = 1;
+			} else {
+				V[0xF] = 0;
+			}
 			
 			I = ((I + V[x]) & 0xFFF);
 			
@@ -403,7 +426,7 @@ public class Memory {
 			x = (opcode & 0x0F00) >>> 8;
 			
 			memory[I] = (V[x] / 100);
-			memory[I + 1] = ((V[x] / 10) % 10);
+			memory[I + 1] = ((V[x] % 100) / 10);
 			memory[I + 2] = ((V[x] % 100) % 10);
 			
 			pc += 2;
@@ -423,7 +446,7 @@ public class Memory {
 			x = (opcode & 0x0F00) >>> 8;
 			
 			for (int j = 0; j <= x; j++) {
-				V[j] = memory[I + j];
+				V[j] = memory[I + j] & 0xFF;
 			}
 			
 			pc += 2;
