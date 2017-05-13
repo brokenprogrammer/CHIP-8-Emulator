@@ -36,9 +36,13 @@ import java.util.concurrent.TimeUnit;
 
 import javafx.application.Application;
 import javafx.event.EventHandler;
-import javafx.scene.Group;
 import javafx.scene.Scene;
+import javafx.scene.control.Menu;
+import javafx.scene.control.MenuBar;
+import javafx.scene.control.MenuItem;
 import javafx.scene.input.KeyEvent;
+import javafx.scene.layout.VBox;
+import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 
 /**
@@ -51,7 +55,7 @@ import javafx.stage.Stage;
 public class Chip8 extends Application {
 
 	private static final int SCREEN_WIDTH = 800;
-	private static final int SCREEN_HEIGHT = 425;
+	private static final int SCREEN_HEIGHT = 450;
 
 	private Stage mainStage;
 
@@ -62,7 +66,7 @@ public class Chip8 extends Application {
 	private Memory memory;
 	private Screen screen;
 	private Keyboard keyboard;
-
+	
 	/**
 	 * Setup the graphics and input systen and clear the memory and screen.
 	 */
@@ -71,15 +75,44 @@ public class Chip8 extends Application {
 
 		screen = new Screen();
 		keyboard = new Keyboard();
-		memory = new Memory(screen, keyboard);
-
+		
+		// Initialize menu that contains buttons for exiting and switching applications to run.
+		MenuBar menuBar = new MenuBar();
+		Menu menuFile = new Menu("File");
+		
+		MenuItem loadRomItem = new MenuItem("Load ROM");
+		loadRomItem.setOnAction(e -> {
+			// Open file choose to let the user select a ROM.
+			FileChooser f = new FileChooser();
+			f.setTitle("Open ROM File");
+			File file = f.showOpenDialog(mainStage);
+			
+			if (file != null) {
+				loadProgram(file.getPath());
+			}
+		});
+		MenuItem exitItem = new MenuItem("Exit");
+		exitItem.setOnAction(e -> {
+			System.exit(0);
+		});
+		
+		menuFile.getItems().add(loadRomItem);
+		menuFile.getItems().add(exitItem);
+		
+		menuBar.getMenus().add(menuFile);
+		
+		// Initial render of the screen.
 		screen.render();
 
-		Group root = new Group();
+		// Place all elements into the main window.
+		VBox root = new VBox();
+		root.getChildren().add(menuBar);
 		root.getChildren().add(screen);
 
+		
 		Scene mainScene = new Scene(root);
 
+		// Handle key presses.
 		mainScene.setOnKeyPressed(new EventHandler<KeyEvent>() {
 			@Override
 			public void handle(KeyEvent e) {
@@ -87,6 +120,7 @@ public class Chip8 extends Application {
 			}
 		});
 
+		// Handle key releases.
 		mainScene.setOnKeyReleased(new EventHandler<KeyEvent>() {
 			@Override
 			public void handle(KeyEvent e) {
@@ -94,15 +128,16 @@ public class Chip8 extends Application {
 			}
 		});
 
+		
+		// Set up the main window for show.
 		mainStage.setScene(mainScene);
 		mainStage.setMaxWidth(SCREEN_WIDTH);
 		mainStage.setMaxHeight(SCREEN_HEIGHT);
 		mainStage.setMinWidth(SCREEN_WIDTH);
 		mainStage.setMinHeight(SCREEN_HEIGHT);
-
+		mainStage.setResizable(false);
+		
 		loadProgram("roms/INVADERS");
-
-		emulationLoop();
 
 		mainStage.show();
 	}
@@ -114,6 +149,11 @@ public class Chip8 extends Application {
 	 *            - The program to copy into memory.
 	 */
 	private void loadProgram(String program) {
+		pause();
+		
+		screen.clear();
+		memory = new Memory(screen, keyboard);
+		
 		// Load binary and pass it to memory
 		try {
 			File f = new File(program);
@@ -124,13 +164,15 @@ public class Chip8 extends Application {
 			in.read(b);
 
 			memory.loadProgram(b);
+			
 			in.close();
-
 		} catch (FileNotFoundException e) {
 			e.printStackTrace();
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
+		
+		emulationLoop();
 	}
 
 	/**
@@ -163,6 +205,16 @@ public class Chip8 extends Application {
 		}, 17, 17, TimeUnit.MILLISECONDS);
 	}
 
+	/**
+	 * Pauses the memory and graphics threads.
+	 */
+	public void pause() {
+		if (cpuThread != null) {
+			cpuThread.cancel(true);
+			displayThread.cancel(true);
+		}
+	}
+	
 	/**
 	 * Stops all the additional threads.
 	 */
