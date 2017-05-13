@@ -29,11 +29,9 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.ScheduledFuture;
-import java.util.concurrent.TimeUnit;
 
+import javafx.animation.KeyFrame;
+import javafx.animation.Timeline;
 import javafx.application.Application;
 import javafx.event.EventHandler;
 import javafx.scene.Scene;
@@ -44,6 +42,7 @@ import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.VBox;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
+import javafx.util.Duration;
 
 /**
  * Main entry point of the application.
@@ -59,10 +58,8 @@ public class Chip8 extends Application {
 
 	private Stage mainStage;
 
-	private ScheduledExecutorService threadPool = Executors.newScheduledThreadPool(2);
-	private ScheduledFuture<?> cpuThread;
-	private ScheduledFuture<?> displayThread;
-
+	Timeline gameLoop;
+	
 	private Memory memory;
 	private Screen screen;
 	private Keyboard keyboard;
@@ -137,8 +134,44 @@ public class Chip8 extends Application {
 		mainStage.setMinHeight(SCREEN_HEIGHT);
 		mainStage.setResizable(false);
 		
-		loadProgram("roms/INVADERS");
+		gameLoop = new Timeline();
+        gameLoop.setCycleCount(Timeline.INDEFINITE);
+		
+        // Construct the keyframe telling the application what to happen inside the game loop.
+        KeyFrame kf = new KeyFrame(
+                Duration.seconds(0.003),
+                actionEvent -> {
+                    try {
+                    	// Fetch opcode
+    					memory.fetchOpcode();
+    					// Decode & Execute opcode
+    					memory.decodeOpcode();
+                    } catch (RuntimeException e) {
+                        gameLoop.stop();
+                    }
+                    
+                    // Render
+                    if (memory.isDrawFlag()) {
+                        screen.render();
+                        memory.setDrawFlag(false);
+                    }
 
+	                 // Update Timers
+					if (memory.getDelayTimer() > 0) {
+						memory.setDelayTimer(memory.getDelayTimer() - 1);
+					}
+	
+					if (memory.getSoundTimer() > 0) {
+						if (memory.getSoundTimer() == 1) {
+							System.out.println("Make Sound!");
+						}
+						memory.setSoundTimer(memory.getSoundTimer() - 1);
+					}
+                });
+
+        gameLoop.getKeyFrames().add(kf);
+		loadProgram("roms/INVADERS");
+        
 		mainStage.show();
 	}
 
@@ -149,7 +182,7 @@ public class Chip8 extends Application {
 	 *            - The program to copy into memory.
 	 */
 	private void loadProgram(String program) {
-		pause();
+		gameLoop.stop();
 		
 		screen.clear();
 		memory = new Memory(screen, keyboard);
@@ -172,58 +205,7 @@ public class Chip8 extends Application {
 			e.printStackTrace();
 		}
 		
-		emulationLoop();
-	}
-
-	/**
-	 * The main emulation loop.
-	 */
-	private void emulationLoop() {
-		// 500 operations/s
-		cpuThread = threadPool.scheduleWithFixedDelay(() -> {
-			// Fetch opcode
-			memory.fetchOpcode();
-
-			// Decode & Execute opcode
-			memory.decodeOpcode();
-		}, 2, 2, TimeUnit.MILLISECONDS);
-
-		// ~60Hz
-		displayThread = threadPool.scheduleWithFixedDelay(() -> {
-			screen.render();
-			// Update Timers
-			if (memory.getDelayTimer() > 0) {
-				memory.setDelayTimer(memory.getDelayTimer() - 1);
-			}
-
-			if (memory.getSoundTimer() > 0) {
-				if (memory.getSoundTimer() == 1) {
-					System.out.println("Make Sound!");
-				}
-				memory.setSoundTimer(memory.getSoundTimer() - 1);
-			}
-		}, 17, 17, TimeUnit.MILLISECONDS);
-	}
-
-	/**
-	 * Pauses the memory and graphics threads.
-	 */
-	public void pause() {
-		if (cpuThread != null) {
-			cpuThread.cancel(true);
-			displayThread.cancel(true);
-		}
-	}
-	
-	/**
-	 * Stops all the additional threads.
-	 */
-	public void stopThreadPool() {
-		if (cpuThread != null) {
-			cpuThread.cancel(true);
-			displayThread.cancel(true);
-		}
-		threadPool.shutdown();
+		gameLoop.play();
 	}
 
 	public static void main(String[] args) {
@@ -234,10 +216,5 @@ public class Chip8 extends Application {
 	public void start(Stage primaryStage) throws Exception {
 		mainStage = primaryStage;
 		initialize();
-	}
-
-	@Override
-	public void stop() {
-		stopThreadPool();
 	}
 }

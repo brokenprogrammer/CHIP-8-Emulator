@@ -49,6 +49,7 @@ public class Memory {
 	private int soundTimer; // Make a sound whenever the sound timer reaches
 		// zero.
 
+	private boolean drawFlag = false;
 	private static final Random RANDOM = new Random();
 	
 	private Screen screen;
@@ -85,6 +86,7 @@ public class Memory {
 			memory[i] = Keyboard.FONT[i];
 		}
 		
+		this.drawFlag = true;
 		this.delayTimer = 0;
 		this.soundTimer = 0;
 	}
@@ -118,13 +120,13 @@ public class Memory {
 		case 0x00E0:
 			// Clear display
 			screen.clear();
-			
+			drawFlag = true;
 			pc += 2;
 			return;
 		case 0x00EE:
 			// Returns from a subroutine
 			pc = stack[sp--];
-			
+			drawFlag = true;
 			pc += 2;
 			return;
 		}
@@ -336,7 +338,7 @@ public class Memory {
 	                }
 	            }
 	        }  
-			
+	        drawFlag = true;
 			pc += 2;
 			return;
 		}
@@ -417,7 +419,7 @@ public class Memory {
 			x = (opcode & 0x0F00) >>> 8;
 			
 			I = V[x] * 5;
-			
+			drawFlag = true;
 			pc += 2;
 			return;
 		case 0xF033:
@@ -488,5 +490,23 @@ public class Memory {
 	 */
 	public void setSoundTimer(int s) {
 		this.soundTimer = s;
+	}
+	
+	/**
+	 * Getter for the draw flag.
+	 * 
+	 * @return The draw flag.
+	 */
+	public boolean isDrawFlag() {
+		return this.drawFlag;
+	}
+	
+	/**
+	 * Setter for the draw flag.
+	 * 
+	 * @param b - draw flag value.
+	 */
+	public void setDrawFlag(boolean b) {
+		this.drawFlag = b;
 	}
 }
