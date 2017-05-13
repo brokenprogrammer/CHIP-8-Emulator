@@ -47,10 +47,12 @@ public class Screen extends Canvas{
 	// pixels (62*32).
 	
 	public Screen() {
-		super(800, 600);
+		super(800, 400);
 		setFocusTraversable(true);
 		
 		gc = this.getGraphicsContext2D();
+		gc.setFill(Color.BLACK);
+		gc.fillRect(0, 0, 800, 400);
 		clear();
 	}
 	
@@ -77,7 +79,7 @@ public class Screen extends Canvas{
 					gc.setFill(Color.BLACK);
 				}
 				
-				gc.fillRect(x*scale, (y*scale)+100, scale, scale);
+				gc.fillRect(x*scale, (y*scale), scale, scale);
 			}
 		}
 	}

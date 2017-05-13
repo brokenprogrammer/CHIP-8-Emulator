@@ -363,7 +363,7 @@ public class Memory {
 		case 0xF007:
 			// FX07 - Set Vx = delay timer value.
 			x = (opcode & 0x0F00) >>> 8;
-			V[x] = (this.delayTimer & 0xFF);
+			V[x] = (delayTimer & 0xFF);
 			
 			pc += 2;
 			return;
